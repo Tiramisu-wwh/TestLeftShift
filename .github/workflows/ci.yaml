@@ -26,23 +26,28 @@ jobs:
       run: python run_all.py
 
     - name: Send DingTalk with sign
-      env:
-        TOKEN: ${{ secrets.DING_WEBHOOK }}          # https://oapi.dingtalk.com/robot/send?access_token=XXX
-        SECRET: ${{ secrets.DING_SECRET }}          # SECxxxxxxxxxxxxxxxxxxxxxxxxxx
-      run: |
-        # ========= 官方公式计算 =========
-        timestamp=$(date +%s000)
-        sign=$(echo -n "$timestamp"$'\n'"$SECRET" | \
-               openssl dgst -sha256 -hmac "$SECRET" -binary | \
-               base64 | tr '+/' '-_' | tr -d '=')
+  if: success()
+  env:
+    TOKEN: ${{ secrets.DING_WEBHOOK }}
+    SECRET: ${{ secrets.DING_SECRET }}
+  run: |
+    sudo apt-get update && sudo apt-get install -y jq
 
-        url="${TOKEN}&timestamp=${timestamp}&sign=${sign}"
-        # =================================
+    if [ ! -f report.md ]; then
+      echo "report.md 不存在，跳过发送"
+      exit 0
+    fi
 
-        # 发送 Markdown
-        curl "$url" \
-          -H 'Content-Type: application/json' \
-          -d "$(jq -n \
-                --arg title "接口自动化报告" \
-                --arg text  "$(cat report.md)" \
-                '{msgtype:"markdown",markdown:{title:$title,text:$text}}')"
+    timestamp=$(($(date +%s%N)/1000000))
+    string_to_sign="${timestamp}\n${SECRET}"
+    sign=$(echo -n "$string_to_sign" | \
+           openssl dgst -sha256 -hmac "$SECRET" -binary | base64)
+
+    url="${TOKEN}&timestamp=${timestamp}&sign=${sign}"
+
+    curl "$url" \
+      -H 'Content-Type: application/json' \
+      -d "$(jq -n \
+            --arg title "接口自动化报告" \
+            --arg text "$(cat report.md)" \
+            '{msgtype:"markdown",markdown:{title:$title,text:$text}}')"
