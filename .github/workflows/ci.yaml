@@ -26,28 +26,28 @@ jobs:
       run: python run_all.py
 
     - name: Send DingTalk with sign
-  if: success()
-  env:
-    TOKEN: ${{ secrets.DING_WEBHOOK }}
-    SECRET: ${{ secrets.DING_SECRET }}
-  run: |
-    sudo apt-get update && sudo apt-get install -y jq
+      if: success()
+      env:
+        TOKEN: ${{ secrets.DING_WEBHOOK }}
+        SECRET: ${{ secrets.DING_SECRET }}
+      run: |
+        sudo apt-get update && sudo apt-get install -y jq
 
-    if [ ! -f report.md ]; then
-      echo "report.md 不存在，跳过发送"
-      exit 0
-    fi
+        if [ ! -f report.md ]; then
+          echo "report.md 不存在，跳过发送"
+          exit 0
+        fi
 
-    timestamp=$(($(date +%s%N)/1000000))
-    string_to_sign="${timestamp}\n${SECRET}"
-    sign=$(echo -n "$string_to_sign" | \
-           openssl dgst -sha256 -hmac "$SECRET" -binary | base64)
+        timestamp=$(($(date +%s%N)/1000000))
+        string_to_sign="${timestamp}\n${SECRET}"
+        sign=$(echo -n "$string_to_sign" | \
+               openssl dgst -sha256 -hmac "$SECRET" -binary | base64)
 
-    url="${TOKEN}&timestamp=${timestamp}&sign=${sign}"
+        url="${TOKEN}&timestamp=${timestamp}&sign=${sign}"
 
-    curl "$url" \
-      -H 'Content-Type: application/json' \
-      -d "$(jq -n \
-            --arg title "接口自动化报告" \
-            --arg text "$(cat report.md)" \
-            '{msgtype:"markdown",markdown:{title:$title,text:$text}}')"
+        curl "$url" \
+          -H 'Content-Type: application/json' \
+          -d "$(jq -n \
+                --arg title "接口自动化报告" \
+                --arg text "$(cat report.md)" \
+                '{msgtype:"markdown",markdown:{title:$title,text:$text}}')"
