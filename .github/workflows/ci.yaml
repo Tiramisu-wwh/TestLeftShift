@@ -27,6 +27,9 @@ jobs:
 
     - name: Send DingTalk
       if: success()
+      env:
+        DING_SECRET: ${{ secrets.DING_SECRET }}
+        DING_WEBHOOK: ${{ secrets.DING_WEBHOOK }}
       run: |
         pip install requests
         python send_ding.py
