@@ -25,18 +25,23 @@ jobs:
     - name: Run tests & generate report
       run: python run_all.py
 
-    - name: Send report to DingTalk (with sign)
+    - name: Send report to DingTalk (带加签)
       env:
-        DING_WEBHOOK_BASE: ${{ secrets.DING_WEBHOOK }}   # 原始地址，不含时间戳
-        DING_SECRET: ${{ secrets.DING_SECRET }}
+        DING_WEBHOOK_BASE: ${{ secrets.DING_WEBHOOK }}   # 仅 https://oapi.dingtalk.com/robot/send?access_token=xxx
+        DING_SECRET: ${{ secrets.DING_SECRET }}          # SECxxxx...
       run: |
-        # 生成时间戳 & 签名
+        # 生成官方要求的时间戳 & 签名
         timestamp=$(date +%s000)
-        string_to_sign="$timestamp\n$DING_SECRET"
-        sign=$(echo -n "$string_to_sign" | openssl dgst -sha256 -hmac "$DING_SECRET" -binary | base64 | tr '+/' '-_' | tr -d '=')
-        # 组装完整 webhook
+        string_to_sign="${timestamp}\n${DING_SECRET}"
+        sign=$(echo -n -e "$string_to_sign" | openssl dgst -sha256 -hmac "$DING_SECRET" -binary | base64 | tr '+/' '-_' | tr -d '=')
+
+        # 组装最终 webhook
         webhook="${DING_WEBHOOK_BASE}&timestamp=${timestamp}&sign=${sign}"
-        # 推送 markdown
+
+        # 发送 markdown
         curl "$webhook" \
           -H 'Content-Type: application/json' \
-          -d "{\"msgtype\":\"markdown\",\"markdown\":{\"title\":\"接口自动化报告\",\"text\":\"$(sed ':a;N;$!ba;s/\n/\\n/g' report.md)\"}}"
+          -d "$(jq -n \
+                --arg title "接口自动化报告" \
+                --arg text  "$(cat report.md)" \
+                '{msgtype:"markdown",markdown:{title:$title,text:$text}}')"
