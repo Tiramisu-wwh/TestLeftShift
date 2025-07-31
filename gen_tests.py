@@ -34,9 +34,9 @@ try:
     else:
         report_lines.append("执行 {case_id} ...失败")
         failed += 1
-except Exception:
-    report_lines.append("执行 {case_id} ...异常")
-    failed += 1
+except Exception as e:
+    report_lines.append(f"执行 {case_id} ...异常: {str(e)}")
+    failed += １
 ''')
 
     # 4. 生成报告并写入 report.md

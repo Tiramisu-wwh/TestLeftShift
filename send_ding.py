@@ -10,6 +10,10 @@ import os
 secret = os.environ.get('DING_SECRET')
 webhook = os.environ.get('DING_WEBHOOK')
 
+# 检查环境变量是否设置
+if not secret or not webhook:
+    raise ValueError("DING_SECRET 和 DING_WEBHOOK 环境变量必须设置")
+
 timestamp = str(round(time.time() * 1000))
 string_to_sign = '{}\n{}'.format(timestamp, secret)
 hmac_code = hmac.new(secret.encode('utf-8'), string_to_sign.encode('utf-8'), digestmod=hashlib.sha256).digest()
@@ -20,10 +24,23 @@ send_url = f"{webhook}&timestamp={timestamp}&sign={sign}"
 headers = {
     "Content-Type": "application/json"
 }
+
+# 读取报告内容
+try:
+    with open("report.md", "r", encoding="utf-8") as f:
+        report_content = f.read()
+        # 截断过长的报告内容，钉钉消息有长度限制
+        if len(report_content) > 2000:
+            report_content = report_content[:2000] + "\n... 报告内容过长，已截断 ..."
+except FileNotFoundError:
+    report_content = "❌ 测试报告文件未找到"
+except Exception as e:
+    report_content = f"❌ 读取报告失败: {str(e)}"
+
 data = {
     "msgtype": "text",
     "text": {
-        "content": "✅ Python 本地钉钉签名测试发送成功！"
+        "content": f"📊 接口自动化测试报告\n{report_content}"
     }
 }
 
